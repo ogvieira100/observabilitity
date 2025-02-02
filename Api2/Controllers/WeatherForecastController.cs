@@ -31,7 +31,7 @@ namespace Api2.Controllers
 
         public WeatherForecastController(ApplicationContext applicationContext, Tracer tracer, IHttpClientFactory clientFactory, Counter<int> contador, ILogger<WeatherForecastController> logger)
         {
-            _applicationContext = applicationContext;   
+            _applicationContext = applicationContext;
             _tracer = tracer;
             _contador = contador;
             _logger = logger;
@@ -43,18 +43,18 @@ namespace Api2.Controllers
         {
             try
             {
-                var setCliente = _applicationContext.Set<Cliente>();    
-                var clienteSearch =  await setCliente.FirstOrDefaultAsync(x => x.Id == cliente.Id);
-
+                var setCliente = _applicationContext.Set<Cliente>();
+                var clienteSearch = await setCliente.FirstOrDefaultAsync(x => x.Id == cliente.Id);
 
                 if (clienteSearch != null)
                 {
+
+                    _logger.LogInformation($"Cadastrando o endereco do cliente {clienteSearch.Nome}  ");
                     var endResidencial = new Endereco
                     {
                         Bairro = "Centro",
                         Logradouro = "Rua 1",
-                        Cep = "12345678",
-                        Cliente = clienteSearch
+                        Cep = "12345678"
                     };
 
                     var endComercial = new Endereco
@@ -62,7 +62,6 @@ namespace Api2.Controllers
                         Bairro = "Centro",
                         Logradouro = "Rua 1",
                         Cep = "12345678",
-                        Cliente = clienteSearch,
                         TipoEndereco = TipoEndereco.Comercial
                     };
 
@@ -72,7 +71,6 @@ namespace Api2.Controllers
                         Bairro = "Centro",
                         Logradouro = "Rua 1",
                         Cep = "12345678",
-                        Cliente = clienteSearch,
                         TipoEndereco = TipoEndereco.Cobranca
                     };
 
@@ -85,17 +83,31 @@ namespace Api2.Controllers
                     clienteSearch.Enderecos.Add(endCobranca);
                 }
                 await _applicationContext.SaveChangesAsync();
+                _logger.LogInformation($"Endereco cadastrado com sucesso {(clienteSearch.Nome, Formatting.Indented,
+                        new JsonSerializerSettings
+                        {
+                            PreserveReferencesHandling = PreserveReferencesHandling.Objects
+                        })}  ");
                 var content = new StringContent(JsonConvert.SerializeObject(cliente), Encoding.UTF8, "application/json");
-                var resp =   await _client.PostAsync("WeatherForecast/CadastraMovimentacaoBancaria", content);
+                _logger.LogInformation($" Transmitindo para a api 3 WeatherForecast/CadastraMovimentacaoBancaria  ");
+                var resp = await _client.PostAsync("WeatherForecast/CadastraMovimentacaoBancaria", content);
                 if (resp.IsSuccessStatusCode)
                 {
-                    return Ok(clienteSearch);
-                }       
-                return BadRequest(clienteSearch);    
+                    _logger.LogInformation($" transmisão concluida  ");
+                    return Ok();
+                }
+                else
+                {
+                    var response = await resp.Content.ReadAsStringAsync();
+                    _logger.LogError($"falha na  transmisão concluida  {response} ");
+                    return BadRequest(response);
+                }
+
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                _logger.LogError($"falha na  transmisão concluida {ex.Message}  ");
+                return BadRequest(ex.Message);
             }
         }
         [HttpPost("PostWeatherForecast2Trace")]

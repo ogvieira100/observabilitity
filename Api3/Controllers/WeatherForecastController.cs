@@ -41,37 +41,55 @@ namespace Api3.Controllers
         [HttpPost("CadastraMovimentacaoBancaria")]
         public async Task<IActionResult> CadastraMovimentacaoBancaria([FromBody] CustomerRequest customerRequest)
         {
-
-            var client = await _applicationContext.Set<Cliente>().FirstOrDefaultAsync(x => x.Id == customerRequest.Id);
-            decimal[] decimals = { 100.50m, -200.50m, 3010.10m, -400m, 500.15m, 60010.50m, 701.55m, -810.50m, 910.55m, -10.00m , 55.10m };
-            for (int i = 1; i <= 100; i++)
+            try
             {
-                var rand  = new Random();
-                var pos =  rand.Next(0, (decimals.Length -1) );
-                var valPos = decimals[pos]; 
-                var tipoMov = valPos > 0 ? TipoMovimentacao.Credito : TipoMovimentacao.Debito;  
-
-                var mov = new MovimentacaoBancaria
+                var client = await _applicationContext.Set<Cliente>().FirstOrDefaultAsync(x => x.Id == customerRequest.Id);
+                _logger.LogInformation($"Cadastrando movimentação bancária para o cliente {(client.Nome, Formatting.Indented, new JsonSerializerSettings { PreserveReferencesHandling = PreserveReferencesHandling.Objects }  )}  ");
+                decimal[] decimals = { 100.50m, -200.50m, 3010.10m, -400m, 500.15m, 60010.50m, 701.55m, -810.50m, 910.55m, -10.00m, 55.10m };
+                for (int i = 1; i <= 100; i++)
                 {
-                    DataMovimentacao = DateTime.Now,
-                    TipoMovimentacao = tipoMov,
-                    Valor = valPos
-                };
+                    var rand = new Random();
+                    var pos = rand.Next(0, (decimals.Length - 1));
+                    var valPos = decimals[pos];
+                    var tipoMov = valPos > 0 ? TipoMovimentacao.Credito : TipoMovimentacao.Debito;
 
-                await _applicationContext.AddAsync(mov);
-                client.MovimentacaoBancarias.Add(mov);
+                    var mov = new MovimentacaoBancaria
+                    {
+                        DataMovimentacao = DateTime.Now,
+                        TipoMovimentacao = tipoMov,
+                        Valor = valPos
+                    };
 
+                    await _applicationContext.AddAsync(mov);
+                    client.MovimentacaoBancarias.Add(mov);
+
+                }
+                _logger.LogInformation($"Movimentação bancária cadastrada com sucesso para o cliente {(client.Nome, Formatting.Indented,
+                    new JsonSerializerSettings
+                    {
+                        PreserveReferencesHandling = PreserveReferencesHandling.Objects
+                    })}  ");
+                await _applicationContext.SaveChangesAsync();
+                /*enviar fila*/
+                _logger.LogInformation($"Enviando mensagem para fila de movimentação bancária  ");
+                _messageBusRabbitMq.Publish(new InserirMovimentacaoBancariaIntegrationEvent
+                {
+                    ClientId = customerRequest.Id,
+                }, new PropsMessageQueueDto
+                {
+                    ServiceName = _serviceInformation.ServiceName,
+                    ServiceVersion = _serviceInformation.ServiceVersion,
+                    Queue = "QueeInserirMovimentacaoBancaria"
+                });
+                return Ok();
             }
-            await _applicationContext.SaveChangesAsync();
-            /*enviar fila*/
-            _messageBusRabbitMq.Publish(new InserirMovimentacaoBancariaIntegrationEvent {
-                ClientId = customerRequest.Id,  
-            }, new PropsMessageQueueDto {
-                ServiceName = _serviceInformation.ServiceName,
-                ServiceVersion = _serviceInformation.ServiceVersion,    
-                Queue = "QueeInserirMovimentacaoBancaria"
-            });      
-            return Ok(customerRequest);
+            catch (Exception ex)
+            {
+                _logger.LogError($"falha na  transmisão concluida {ex.Message}  ");
+                return BadRequest(ex.Message);
+            }
+
+      
         }
 
         [HttpPost("PostWeatherForecast2Trace")]

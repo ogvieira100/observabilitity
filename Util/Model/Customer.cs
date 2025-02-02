@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc.Formatters;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,6 +31,8 @@ namespace Util.Model
         public string Bairro { get; set; }
         public string Logradouro { get; set; }
         public string Cep { get; set; }
+
+        
         public virtual Cliente Cliente { get; set; }
         public long ClienteId { get; set; }
 
@@ -52,6 +55,8 @@ namespace Util.Model
         public decimal Valor { get; set; }
         public TipoMovimentacao TipoMovimentacao { get; set; }
         public DateTime DataMovimentacao { get; set; }
+
+        
         public virtual Cliente Cliente { get; set; }
         public long ClienteId { get; set; }
         public MovimentacaoBancaria()
@@ -67,7 +72,11 @@ namespace Util.Model
         public long Id { get; set; }
         public string Nome { get; set; }
         public string CPF { get; set; }
+
+        
         public virtual List<Endereco> Enderecos { get; set; }
+
+        
         public virtual List<MovimentacaoBancaria> MovimentacaoBancarias { get; set; }
 
         public Cliente()

@@ -42,28 +42,37 @@ namespace Api.Controllers
         {
             try
             {
-           
+                _logger.LogInformation($"Cadastrando o cliente {cliente.Nome}  ");
+
                 var clienteAdd = new Cliente
                 {
                     Nome = cliente.Nome,
                     CPF = cliente.CPF
-                };  
+                };
                 await _applicationContext.AddAsync(clienteAdd);
                 await _applicationContext.SaveChangesAsync();
                 cliente.Id = clienteAdd.Id;
+                _logger.LogInformation($"Cliente cadastrado com sucesso {(cliente.Nome)}  ");
                 var content = new StringContent(JsonConvert.SerializeObject(cliente), Encoding.UTF8, "application/json");
-                var resp =   await _httpClientApi2.PostAsync("WeatherForecast/CadastrarEndereco", content);
+                _logger.LogInformation($" Transmitindo para a api 2 WeatherForecast/CadastrarEndereco  ");
+                var resp = await _httpClientApi2.PostAsync("WeatherForecast/CadastrarEndereco", content);
                 if (resp.IsSuccessStatusCode)
                 {
-                    return Ok(clienteAdd);
+                    _logger.LogInformation($" transmisão concluida  ");
+                    return Ok();
                 }
-
-                return BadRequest(clienteAdd); 
+                else
+                {
+                    var response = await resp.Content.ReadAsStringAsync();  
+                    _logger.LogError($"falha na  transmisão concluida  {response} ");
+                    return BadRequest(response);
+                }
+                    
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                _logger.LogError($"falha na  transmisão concluida {ex.Message}  ");
+                return  BadRequest(ex.Message);     
             }
         
         }

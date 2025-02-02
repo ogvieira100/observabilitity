@@ -13,6 +13,7 @@ using OpenTelemetry.Context.Propagation;
 using OpenTelemetry;
 using System.Threading.Channels;
 using Azure.Messaging;
+using Microsoft.Extensions.Logging;
 
 namespace Util
 {
@@ -23,9 +24,11 @@ namespace Util
         IConnection _connection;
         IModel _channel = null;
         bool _disposedValue;
+        readonly ILogger<MessageBusRabbitMq> _logger;
         private static readonly TextMapPropagator Propagator = Propagators.DefaultTextMapPropagator;
-        public MessageBusRabbitMq(IConfiguration configuration)
+        public MessageBusRabbitMq(ILogger<MessageBusRabbitMq> logger,IConfiguration configuration)
         {
+            _logger = logger;
             _configuration = configuration;
         }
 
@@ -102,6 +105,7 @@ namespace Util
 
             try
             {
+                _logger.LogInformation("Publicando no rabbitmq");   
 
                 TryConnect();
 
@@ -122,6 +126,7 @@ namespace Util
 
                     var activityName = $"{propsMessageQueeDto.Queue} send";
 
+                    _logger.LogInformation($"Publicando com o service name ${propsMessageQueeDto.ServiceName}");   
 
                     ActivitySource ActivitySource = new ActivitySource(propsMessageQueeDto.ServiceName,
                         propsMessageQueeDto.ServiceVersion);
